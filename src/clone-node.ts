@@ -160,12 +160,6 @@ function cloneCSSStyle<T extends HTMLElement>(
         sourceStyle.getPropertyPriority(name),
       )
     })
-
-    const boxShadow = sourceStyle.getPropertyValue('box-shadow')
-    if (boxShadow && boxShadow !== 'none') {
-      targetStyle.setProperty('-webkit-box-shadow', boxShadow)
-      targetStyle.setProperty('box-shadow', boxShadow)
-    }
   }
 }
 
@@ -224,7 +218,6 @@ async function ensureSVGSymbols<T extends HTMLElement>(
       const exist = clone.querySelector(id)
       const definition = document.querySelector(id) as HTMLElement
       if (!exist && definition && !processedDefs[id]) {
-         
         processedDefs[id] = (await cloneNode(definition, options, true))!
       }
     }

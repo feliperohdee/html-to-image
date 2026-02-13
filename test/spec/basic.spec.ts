@@ -159,7 +159,7 @@ describe('basic usage', () => {
     assertTextRendered([text])()
   })
 
-  it.skip('should render content from <canvas>', async () => {
+  it('should render content from <canvas>', async () => {
     const text = 'AB2哈'
     const node = await bootstrap('canvas/node.html', 'canvas/style.css')
     const canvas = node.querySelector('#content') as HTMLCanvasElement
