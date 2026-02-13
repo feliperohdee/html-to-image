@@ -1,4 +1,4 @@
-/* eslint-disable promise/no-callback-in-promise */
+import { describe, expect, it } from 'vitest'
 
 import * as embeding from '../../src/embed-resources'
 
@@ -23,43 +23,34 @@ describe('embeding', () => {
   })
 
   describe('embed', () => {
-    it('should embed url', (done) => {
-      embeding
-        .embed(
-          'url(http://acme.com/image.png), url(foo.com)',
-          'http://acme.com/image.png',
-          null,
-          {},
-          () => Promise.resolve('AAA'),
-        )
-        .then((result) => {
-          expect(result).toEqual('url(data:image/png;base64,AAA), url(foo.com)')
-        })
-        .then(done)
-        .catch(done)
+    it('should embed url', async () => {
+      const result = await embeding.embed(
+        'url(http://acme.com/image.png), url(foo.com)',
+        'http://acme.com/image.png',
+        null,
+        {},
+        () => { return Promise.resolve('AAA') },
+      )
+      expect(result).toEqual('url(data:image/png;base64,AAA), url(foo.com)')
     })
 
-    it('should resolve urls if base url given', (done) => {
-      embeding
-        .embed(
-          'url(images/image.png)',
-          'images/image.png',
-          'http://acme.com/',
-          {},
-          (url) =>
-            Promise.resolve(
-              (
-                {
-                  'http://acme.com/images/image.png': 'AAA',
-                } as any
-              )[url],
-            ),
-        )
-        .then((result) => {
-          expect(result).toEqual('url(data:image/png;base64,AAA)')
-        })
-        .then(done)
-        .catch(done)
+    it('should resolve urls if base url given', async () => {
+      const result = await embeding.embed(
+        'url(images/image.png)',
+        'images/image.png',
+        'http://acme.com/',
+        {},
+        (url) => {
+          return Promise.resolve(
+            (
+              {
+                'http://acme.com/images/image.png': 'AAA',
+              } as any
+            )[url],
+          )
+        },
+      )
+      expect(result).toEqual('url(data:image/png;base64,AAA)')
     })
   })
 })

@@ -58,13 +58,13 @@ function parseCSS(source: string) {
   // strip out comments
   let cssText = source.replace(commentsRegex, '')
 
-  // eslint-disable-next-line prefer-regex-literals
+   
   const keyframesRegex = new RegExp(
     '((@.*?keyframes [\\s\\S]*?){([\\s\\S]*?}\\s*?)})',
     'gi',
   )
 
-  // eslint-disable-next-line no-constant-condition
+   
   while (true) {
     const matches = keyframesRegex.exec(cssText)
     if (matches === null) {
@@ -82,7 +82,7 @@ function parseCSS(source: string) {
   // unified regex
   const unifiedRegex = new RegExp(combinedCSSRegex, 'gi')
 
-  // eslint-disable-next-line no-constant-condition
+   
   while (true) {
     let matches = importRegex.exec(cssText)
     if (matches === null) {
@@ -234,7 +234,11 @@ export async function getWebFontCSS<T extends HTMLElement>(
   const cssTexts = await Promise.all(
     rules
       .filter((rule) =>
-        usedFonts.has(normalizeFontFamily(rule.style.fontFamily || rule.style.getPropertyValue('fontFamily'))),
+        usedFonts.has(
+          normalizeFontFamily(
+            rule.style.fontFamily || rule.style.getPropertyValue('font-family'),
+          ),
+        ),
       )
       .map((rule) => {
         const baseUrl = rule.parentStyleSheet

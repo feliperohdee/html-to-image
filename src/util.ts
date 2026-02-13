@@ -39,7 +39,7 @@ export const uuid = (() => {
 
   // ref: http://stackoverflow.com/a/6248722/2519373
   const random = () =>
-    // eslint-disable-next-line no-bitwise
+     
     `0000${((Math.random() * 36 ** 4) << 0).toString(36)}`.slice(-4)
 
   return () => {

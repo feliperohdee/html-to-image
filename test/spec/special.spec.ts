@@ -1,22 +1,17 @@
-/* eslint-disable promise/no-callback-in-promise */
+import { describe, it } from 'vitest'
 
-import '../spec/setup'
-import { toPng } from '../../src'
+import htmlToImage from '../../src'
 import { delay } from '../../src/util'
-import { assertTextRendered, bootstrap, renderAndCheck } from '../spec/helper'
+import { assertTextRendered, bootstrap, renderAndCheck } from './helper'
 
 describe('special cases', () => {
-  xit('should not crash when loading external stylesheet causes error', (done) => {
-    bootstrap('ext-css/node.html', 'ext-css/style.css')
-      .then(delay(1000))
-      .then((node) => {
-        toPng(node)
-      })
-      .then(done)
-      .catch(done)
+  it.skip('should not crash when loading external stylesheet causes error', async () => {
+    const node = await bootstrap('ext-css/node.html', 'ext-css/style.css')
+    await delay(1000)(node)
+    await htmlToImage.toPng(node)
   })
 
-  xit('should render content from shadow node of custom element', (done) => {
+  it.skip('should render content from shadow node of custom element', async () => {
     const link = document.createElement('link')
     const script = document.createElement('script')
     script.src = 'https://unpkg.com/mathlive/dist/mathlive.min.js'
@@ -35,28 +30,20 @@ describe('special cases', () => {
     ]
     document.head.append(script, link)
 
-    Promise.all(tasks).then(() =>
-      // eslint-disable-next-line promise/no-nesting
-      bootstrap(
-        'custom-element/node.html',
-        'custom-element/style.css',
-        'custom-element/image',
-      )
-        .then(delay(1000))
-        .then(renderAndCheck)
-        .then(() => {
-          link.remove()
-          script.remove()
-          done()
-        })
-        .catch(done),
+    await Promise.all(tasks)
+    const node = await bootstrap(
+      'custom-element/node.html',
+      'custom-element/style.css',
+      'custom-element/image',
     )
+    await delay(1000)(node)
+    await renderAndCheck(node)
+    link.remove()
+    script.remove()
   })
 
-  it('should caputre lazy loading images', (done) => {
-    bootstrap('images/loading.html', 'images/style.css')
-      .then(assertTextRendered(['PNG', 'JPG']))
-      .then(done)
-      .catch(done)
+  it('should caputre lazy loading images', async () => {
+    const node = await bootstrap('images/loading.html', 'images/style.css')
+    assertTextRendered(['PNG', 'JPG'])(node)
   })
 })

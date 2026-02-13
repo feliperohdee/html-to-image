@@ -1,11 +1,15 @@
+import { afterAll, beforeAll } from 'vitest'
+
 import { clean } from './helper'
 
+let originalPixelRatio: number
+
 beforeAll(() => {
-  process.env.devicePixelRatio = '1'
-  jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000
+  originalPixelRatio = window.devicePixelRatio
+  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 })
 })
 
 afterAll(() => {
-  delete process.env.devicePixelRatio
+  Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: originalPixelRatio })
   clean()
 })

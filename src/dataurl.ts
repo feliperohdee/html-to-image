@@ -75,7 +75,7 @@ export async function resourceToDataURL(
 
   // ref: https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest#Bypassing_the_cache
   if (options.cacheBust) {
-    // eslint-disable-next-line no-param-reassign
+     
     resourceUrl += (/\?/.test(resourceUrl) ? '&' : '?') + new Date().getTime()
   }
 
@@ -86,7 +86,7 @@ export async function resourceToDataURL(
       options.fetchRequestInit,
       ({ res, result }) => {
         if (!contentType) {
-          // eslint-disable-next-line no-param-reassign
+           
           contentType = res.headers.get('Content-Type') || ''
         }
         return getContentFromDataUrl(result)

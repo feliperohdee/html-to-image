@@ -1,35 +1,37 @@
 import pixelmatch from 'pixelmatch'
-import { toPng } from '../../src'
+import { expect } from 'vitest'
+
+import htmlToImage from '../../src'
 import { Options } from '../../src/types'
 import { getPixelRatio } from '../../src/util'
 
-export function getCaptureNode() {
+export const getCaptureNode = () => {
   return document.getElementById('dom-node') as HTMLDivElement
 }
 
-export function getReferenceImage() {
+export const getReferenceImage = () => {
   return document.getElementById('ref-image') as HTMLImageElement
 }
 
-export function getCanvasNode() {
+export const getCanvasNode = () => {
   return document.getElementById('canvas') as HTMLCanvasElement
 }
 
-export function getStyleNode() {
+export const getStyleNode = () => {
   return document.getElementById('style') as HTMLStyleElement
 }
 
-const BASE_URL = '/base/test/resources/'
+const BASE_URL = '/test/resources/'
 const ROOT_ID = 'test-root'
 
-export function clean() {
+export const clean = () => {
   const root = document.getElementById(ROOT_ID)
   if (root && root.parentNode) {
     root.parentNode.removeChild(root)
   }
 }
 
-async function setup() {
+const setup = async () => {
   const html = await fetchFile('page.html')
   clean()
   const root = document.createElement('div') as HTMLDivElement
@@ -38,11 +40,27 @@ async function setup() {
   document.body.appendChild(root)
 }
 
-export async function bootstrap(
+const waitForFrame = () => {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => { return resolve() })
+  })
+}
+
+const waitForImageLoad = (img: HTMLImageElement) => {
+  if (img.complete && img.naturalWidth > 0) {
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve, reject) => {
+    img.onload = () => { return resolve() }
+    img.onerror = () => { return reject(new Error('Reference image failed to load')) }
+  })
+}
+
+export const bootstrap = async (
   htmlUrl: string,
   cssUrl?: string,
   refImageUrl?: string,
-) {
+) => {
   await setup()
 
   const html = await fetchFile(htmlUrl)
@@ -56,34 +74,41 @@ export async function bootstrap(
 
   if (refImageUrl) {
     const url = await fetchFile(refImageUrl)
-    getReferenceImage().setAttribute('src', url)
+    const refImg = getReferenceImage()
+    refImg.setAttribute('src', url)
+    await waitForImageLoad(refImg)
   }
+
+  await waitForFrame()
 
   return captureNode
 }
 
-async function fetchFile(fileName: string) {
+const fetchFile = async (fileName: string) => {
   const url = BASE_URL + fileName
   const res = await fetch(url)
-  return res.text()
+  const text = await res.text()
+  if (!res.ok) {
+    throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`)
+  }
+  return text.trim()
 }
 
-function makeImage(src: string) {
-  // console.log(src)
+const makeImage = (src: string) => {
   return new Promise<HTMLImageElement>((resolve) => {
     const image = new Image()
-    image.onload = () => resolve(image)
+    image.onload = () => { return resolve(image) }
     image.src = src
   })
 }
 
-function makeCanvas(
+const makeCanvas = (
   img: HTMLImageElement,
   size?: {
-    width?: number
     height?: number
+    width?: number
   },
-) {
+) => {
   const canvas = getCanvasNode()
   const context = canvas.getContext('2d')!
 
@@ -97,57 +122,53 @@ function makeCanvas(
 
   context.imageSmoothingEnabled = false
   context.drawImage(img, 0, 0)
-  return { canvas, context, width, height }
+  return { canvas, context, height, width }
 }
 
-function drawImg(
+const drawImg = (
   img: HTMLImageElement,
   size?: {
-    width?: number
     height?: number
+    width?: number
   },
-) {
-  const { context, width, height } = makeCanvas(img, size)
+) => {
+  const { context, height, width } = makeCanvas(img, size)
   return context.getImageData(0, 0, width, height)
 }
 
-export async function drawDataUrl(
+export const drawDataUrl = async (
   dataUrl: string,
   size?: {
-    width?: number
     height?: number
+    width?: number
   },
-) {
-  return Promise.resolve(dataUrl)
-    .then(makeImage)
-    .then((image) => drawImg(image, size))
+) => {
+  const image = await makeImage(dataUrl)
+  return drawImg(image, size)
 }
 
-export async function check(dataUrl: string) {
-  return Promise.resolve(dataUrl)
-    .then(drawDataUrl)
-    .then((imgData) => compareToRefImage(imgData))
+export const check = async (dataUrl: string) => {
+  const imgData = await drawDataUrl(dataUrl)
+  compareToRefImage(imgData)
 }
 
-export async function logDataUrl(node: HTMLDivElement = getCaptureNode()) {
-  return toPng(node)
-    .then(makeImage)
-    .then(makeCanvas)
-    .then(({ canvas }) => {
-      // eslint-disable-next-line
-      console.log(canvas.toDataURL())
-      return node
-    })
+export const logDataUrl = async (node: HTMLDivElement = getCaptureNode()) => {
+  const png = await htmlToImage.toPng(node)
+  const image = await makeImage(png)
+  const { canvas } = makeCanvas(image)
+  console.log(canvas.toDataURL())
+  return node
 }
 
-export async function renderAndCheck(
+export const renderAndCheck = async (
   node: HTMLDivElement = getCaptureNode(),
   options: Options = {},
-) {
-  return toPng(node, options).then(check)
+) => {
+  const png = await htmlToImage.toPng(node, options)
+  await check(png)
 }
 
-export function compareToRefImage(sourceData: ImageData, threshold = 0.1) {
+export const compareToRefImage = (sourceData: ImageData, threshold = 0.1) => {
   const ref = getReferenceImage()
   const refData = drawImg(ref)
   expect(
@@ -157,62 +178,51 @@ export function compareToRefImage(sourceData: ImageData, threshold = 0.1) {
   ).toBeLessThan(100)
 }
 
-export async function getSvgDocument(dataUrl: string): Promise<XMLDocument> {
-  return window
-    .fetch(dataUrl)
-    .then((res) => res.text())
-    .then((str) => new window.DOMParser().parseFromString(str, 'text/xml'))
+export const getSvgDocument = async (dataUrl: string): Promise<XMLDocument> => {
+  const res = await window.fetch(dataUrl)
+  const str = await res.text()
+  return new window.DOMParser().parseFromString(str, 'text/xml')
 }
 
 const PASS_TEXT_MATCH = true
 
-export function assertTextRendered(lines: string[], options?: Options) {
-  return (node: HTMLDivElement = getCaptureNode()) =>
-    PASS_TEXT_MATCH
+export const assertTextRendered = (lines: string[], options?: Options) => {
+  return (node: HTMLDivElement = getCaptureNode()) => {
+    return PASS_TEXT_MATCH
       ? expect(true).toBe(true)
       : recognizeImage(node, options).then((text) => {
-          expect(lines.every((line) => text.includes(line))).toBe(true)
+          expect(lines.every((line) => { return text.includes(line) })).toBe(true)
         })
+  }
 }
 
-export async function recognizeImage(node: HTMLDivElement, options?: Options) {
-  return toPng(node, options)
-    .then(drawDataUrl)
-    .then(() => recognize(getCanvasNode().toDataURL()))
+export const recognizeImage = async (node: HTMLDivElement, options?: Options) => {
+  const png = await htmlToImage.toPng(node, options)
+  await drawDataUrl(png)
+  return recognize(getCanvasNode().toDataURL())
 }
 
-// see: https://ocr.space/OCRAPI
-async function recognize(dataUrl: string) {
+const recognize = async (dataUrl: string) => {
   const data = new FormData()
   data.append('base64Image', dataUrl)
-
-  // You may only perform this action upto maximum 180 number of times within
-  // 3600 seconds.
-  // data.append('apikey', 'aa8c3d7de088957')
   data.append('apikey', 'K89675126388957')
 
-  return window
-    .fetch('https://api.ocr.space/parse/image', {
-      method: 'post',
+  try {
+    const res = await window.fetch('https://api.ocr.space/parse/image', {
       body: data,
+      method: 'post',
     })
-    .then((res) => res.json())
-    .then((data) => {
-      const result: string[] = []
-      if (!data.IsErroredOnProcessing) {
-        // console.log(JSON.stringify(data.ParsedResults))
-        data.ParsedResults.forEach(({ ParsedText }: any) => {
-          if (ParsedText) {
-            result.push(ParsedText)
-          }
-        })
-      }
-      const text = result.join('\n').trim().replace('\r\n', '\n')
-      // console.log(`recognized text: ${text}`)
-      return text
-    })
-    .catch(() => {
-      // console.log(`text recognize error: ${err}`)
-      return ''
-    })
+    const json = await res.json()
+    const result: string[] = []
+    if (!json.IsErroredOnProcessing) {
+      json.ParsedResults.forEach(({ ParsedText }: any) => {
+        if (ParsedText) {
+          result.push(ParsedText)
+        }
+      })
+    }
+    return result.join('\n').trim().replace('\r\n', '\n')
+  } catch {
+    return ''
+  }
 }

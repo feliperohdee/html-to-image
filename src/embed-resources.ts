@@ -55,7 +55,7 @@ function filterPreferredFontFormat(
   return !preferredFontFormat
     ? str
     : str.replace(FONT_SRC_REGEX, (match: string) => {
-        // eslint-disable-next-line no-constant-condition
+         
         while (true) {
           const [src, , format] = URL_WITH_FORMAT_REGEX.exec(match) || []
           if (!format) {

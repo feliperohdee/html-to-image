@@ -1,6 +1,18 @@
 {
- "extends": "@bubkoo/tsconfig",
-  "include": [
-    "src/**/*.ts"
-  ]
+  "compilerOptions": {
+    "declaration": true,
+    "esModuleInterop": true,
+    "lib": ["DOM", "ES2020"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "target": "es2017"
+  },
+  "exclude": ["node_modules", "dist"],
+  "include": ["src/**/*.ts"]
 }
