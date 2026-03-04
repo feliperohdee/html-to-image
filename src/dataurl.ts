@@ -1,18 +1,37 @@
 import type { Options } from './types';
 
+const cache: { [url: string]: string } = {};
+
+const getCacheKey = (
+	url: string,
+	contentType: string | undefined,
+	includeQueryParams: boolean | undefined
+) => {
+	let key = url.replace(/\?.*/, '');
+
+	if (includeQueryParams) {
+		key = url;
+	}
+
+	// font resource
+	if (/ttf|otf|eot|woff2?/i.test(key)) {
+		key = key.replace(/.*\//, '');
+	}
+
+	return contentType ? `[${contentType}]${key}` : key;
+};
+
 const getContentFromDataUrl = (dataURL: string) => {
 	return dataURL.split(/,/)[1];
 };
 
-export const isDataUrl = (url: string) => {
-	return url.search(/^(data:)/) !== -1;
+const clearResourceCache = () => {
+	Object.keys(cache).forEach(key => {
+		delete cache[key];
+	});
 };
 
-export const makeDataUrl = (content: string, mimeType: string) => {
-	return `data:${mimeType};base64,${content}`;
-};
-
-export const fetchAsDataURL = async <T>(
+const fetchAsDataURL = async <T>(
 	url: string,
 	init: RequestInit | undefined,
 	process: (data: { result: string; res: Response }) => T
@@ -37,34 +56,15 @@ export const fetchAsDataURL = async <T>(
 	});
 };
 
-const cache: { [url: string]: string } = {};
-
-export const clearResourceCache = () => {
-	Object.keys(cache).forEach(key => {
-		delete cache[key];
-	});
+const isDataUrl = (url: string) => {
+	return url.search(/^(data:)/) !== -1;
 };
 
-const getCacheKey = (
-	url: string,
-	contentType: string | undefined,
-	includeQueryParams: boolean | undefined
-) => {
-	let key = url.replace(/\?.*/, '');
-
-	if (includeQueryParams) {
-		key = url;
-	}
-
-	// font resource
-	if (/ttf|otf|eot|woff2?/i.test(key)) {
-		key = key.replace(/.*\//, '');
-	}
-
-	return contentType ? `[${contentType}]${key}` : key;
+const makeDataUrl = (content: string, mimeType: string) => {
+	return `data:${mimeType};base64,${content}`;
 };
 
-export const resourceToDataURL = async (
+const resourceToDataURL = async (
 	resourceUrl: string,
 	contentType: string | undefined,
 	options: Options
@@ -113,4 +113,12 @@ export const resourceToDataURL = async (
 
 	cache[cacheKey] = dataURL;
 	return dataURL;
+};
+
+export {
+	clearResourceCache,
+	fetchAsDataURL,
+	isDataUrl,
+	makeDataUrl,
+	resourceToDataURL
 };

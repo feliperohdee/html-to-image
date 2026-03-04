@@ -13,17 +13,25 @@ import {
 	nodeToDataURL
 } from './util';
 
-const toSvg = async <T extends HTMLElement>(
+const clearCache = () => {
+	clearResourceCache();
+	clearCSSCache();
+};
+
+const getFontEmbedCSS = async <T extends HTMLElement>(
 	node: T,
 	options: Options = {}
 ): Promise<string> => {
-	const { width, height } = getImageSize(node, options);
-	const clonedNode = (await cloneNode(node, options, true)) as HTMLElement;
-	await embedWebFonts(clonedNode, options);
-	await embedImages(clonedNode, options);
-	applyStyle(clonedNode, options);
-	const datauri = nodeToDataURL(clonedNode, width, height);
-	return datauri;
+	return getWebFontCSS(node, options);
+};
+
+const toBlob = async <T extends HTMLElement>(
+	node: T,
+	options: Options = {}
+): Promise<Blob | null> => {
+	const canvas = await toCanvas(node, options);
+	const blob = await canvasToBlob(canvas);
+	return blob;
 };
 
 const toCanvas = async <T extends HTMLElement>(
@@ -60,6 +68,14 @@ const toCanvas = async <T extends HTMLElement>(
 	return canvas;
 };
 
+const toJpeg = async <T extends HTMLElement>(
+	node: T,
+	options: Options = {}
+): Promise<string> => {
+	const canvas = await toCanvas(node, options);
+	return canvas.toDataURL('image/jpeg', options.quality || 1);
+};
+
 const toPixelData = async <T extends HTMLElement>(
 	node: T,
 	options: Options = {}
@@ -77,33 +93,17 @@ const toPng = async <T extends HTMLElement>(
 	return canvas.toDataURL();
 };
 
-const toJpeg = async <T extends HTMLElement>(
+const toSvg = async <T extends HTMLElement>(
 	node: T,
 	options: Options = {}
 ): Promise<string> => {
-	const canvas = await toCanvas(node, options);
-	return canvas.toDataURL('image/jpeg', options.quality || 1);
-};
-
-const toBlob = async <T extends HTMLElement>(
-	node: T,
-	options: Options = {}
-): Promise<Blob | null> => {
-	const canvas = await toCanvas(node, options);
-	const blob = await canvasToBlob(canvas);
-	return blob;
-};
-
-const getFontEmbedCSS = async <T extends HTMLElement>(
-	node: T,
-	options: Options = {}
-): Promise<string> => {
-	return getWebFontCSS(node, options);
-};
-
-const clearCache = () => {
-	clearResourceCache();
-	clearCSSCache();
+	const { width, height } = getImageSize(node, options);
+	const clonedNode = (await cloneNode(node, options, true)) as HTMLElement;
+	await embedWebFonts(clonedNode, options);
+	await embedImages(clonedNode, options);
+	applyStyle(clonedNode, options);
+	const datauri = nodeToDataURL(clonedNode, width, height);
+	return datauri;
 };
 
 export {

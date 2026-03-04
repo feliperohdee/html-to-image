@@ -13,69 +13,6 @@ const cloneCanvasElement = async (canvas: HTMLCanvasElement) => {
 	return createImage(dataURL);
 };
 
-const cloneVideoElement = async (video: HTMLVideoElement, options: Options) => {
-	if (video.currentSrc) {
-		const canvas = document.createElement('canvas');
-		const ctx = canvas.getContext('2d');
-		canvas.width = video.clientWidth;
-		canvas.height = video.clientHeight;
-		ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
-		const dataURL = canvas.toDataURL();
-		return createImage(dataURL);
-	}
-
-	const poster = video.poster;
-	const contentType = getMimeType(poster);
-	const dataURL = await resourceToDataURL(poster, contentType, options);
-	return createImage(dataURL);
-};
-
-const cloneIFrameElement = async (
-	iframe: HTMLIFrameElement,
-	options: Options
-) => {
-	try {
-		if (iframe?.contentDocument?.body) {
-			return (await cloneNode(
-				iframe.contentDocument.body,
-				options,
-				true
-			)) as HTMLBodyElement;
-		}
-	} catch {
-		// Failed to clone iframe
-	}
-
-	return iframe.cloneNode(false) as HTMLIFrameElement;
-};
-
-const cloneSingleNode = async <T extends HTMLElement>(
-	node: T,
-	options: Options
-): Promise<HTMLElement> => {
-	if (isInstanceOfElement(node, HTMLCanvasElement)) {
-		return cloneCanvasElement(node);
-	}
-
-	if (isInstanceOfElement(node, HTMLVideoElement)) {
-		return cloneVideoElement(node, options);
-	}
-
-	if (isInstanceOfElement(node, HTMLIFrameElement)) {
-		return cloneIFrameElement(node, options);
-	}
-
-	return node.cloneNode(isSVGElement(node)) as T;
-};
-
-const isSlotElement = (node: HTMLElement): node is HTMLSlotElement => {
-	return node.tagName != null && node.tagName.toUpperCase() === 'SLOT';
-};
-
-const isSVGElement = (node: HTMLElement): node is HTMLSlotElement => {
-	return node.tagName != null && node.tagName.toUpperCase() === 'SVG';
-};
-
 const cloneChildren = async <T extends HTMLElement>(
 	nativeNode: T,
 	clonedNode: T,
@@ -173,6 +110,25 @@ const cloneCSSStyle = <T extends HTMLElement>(
 	}
 };
 
+const cloneIFrameElement = async (
+	iframe: HTMLIFrameElement,
+	options: Options
+) => {
+	try {
+		if (iframe?.contentDocument?.body) {
+			return (await cloneNode(
+				iframe.contentDocument.body,
+				options,
+				true
+			)) as HTMLBodyElement;
+		}
+	} catch {
+		// Failed to clone iframe
+	}
+
+	return iframe.cloneNode(false) as HTMLIFrameElement;
+};
+
 const cloneInputValue = <T extends HTMLElement>(
 	nativeNode: T,
 	clonedNode: T
@@ -200,6 +156,42 @@ const cloneSelectValue = <T extends HTMLElement>(
 			selectedOption.setAttribute('selected', '');
 		}
 	}
+};
+
+const cloneSingleNode = async <T extends HTMLElement>(
+	node: T,
+	options: Options
+): Promise<HTMLElement> => {
+	if (isInstanceOfElement(node, HTMLCanvasElement)) {
+		return cloneCanvasElement(node);
+	}
+
+	if (isInstanceOfElement(node, HTMLVideoElement)) {
+		return cloneVideoElement(node, options);
+	}
+
+	if (isInstanceOfElement(node, HTMLIFrameElement)) {
+		return cloneIFrameElement(node, options);
+	}
+
+	return node.cloneNode(isSVGElement(node)) as T;
+};
+
+const cloneVideoElement = async (video: HTMLVideoElement, options: Options) => {
+	if (video.currentSrc) {
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d');
+		canvas.width = video.clientWidth;
+		canvas.height = video.clientHeight;
+		ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+		const dataURL = canvas.toDataURL();
+		return createImage(dataURL);
+	}
+
+	const poster = video.poster;
+	const contentType = getMimeType(poster);
+	const dataURL = await resourceToDataURL(poster, contentType, options);
+	return createImage(dataURL);
 };
 
 const decorate = <T extends HTMLElement>(
@@ -267,7 +259,15 @@ const ensureSVGSymbols = async <T extends HTMLElement>(
 	return clone;
 };
 
-export const cloneNode = async <T extends HTMLElement>(
+const isSlotElement = (node: HTMLElement): node is HTMLSlotElement => {
+	return node.tagName != null && node.tagName.toUpperCase() === 'SLOT';
+};
+
+const isSVGElement = (node: HTMLElement): node is HTMLSlotElement => {
+	return node.tagName != null && node.tagName.toUpperCase() === 'SVG';
+};
+
+const cloneNode = async <T extends HTMLElement>(
 	node: T,
 	options: Options,
 	isRoot?: boolean
@@ -281,3 +281,5 @@ export const cloneNode = async <T extends HTMLElement>(
 	const decorated = decorate(node, withChildren, options);
 	return ensureSVGSymbols(decorated, options);
 };
+
+export { cloneNode };

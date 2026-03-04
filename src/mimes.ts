@@ -19,7 +19,9 @@ const getExtension = (url: string): string => {
 	return match ? match[1] : '';
 };
 
-export const getMimeType = (url: string): string => {
+const getMimeType = (url: string): string => {
 	const extension = getExtension(url).toLowerCase();
 	return mimes[extension] || '';
 };
+
+export { getMimeType };

@@ -1,8 +1,23 @@
 import type { Options } from './types';
 
-let resolverDoc: Document | null = null;
-let resolverBase: HTMLBaseElement | null = null;
+const canvasDimensionLimit = 16384;
+
 let resolverAnchor: HTMLAnchorElement | null = null;
+let resolverBase: HTMLBaseElement | null = null;
+let resolverDoc: Document | null = null;
+let styleProps: string[] | null = null;
+
+const getNodeHeight = (node: HTMLElement) => {
+	const topBorder = px(node, 'border-top-width');
+	const bottomBorder = px(node, 'border-bottom-width');
+	return node.clientHeight + topBorder + bottomBorder;
+};
+
+const getNodeWidth = (node: HTMLElement) => {
+	const leftBorder = px(node, 'border-left-width');
+	const rightBorder = px(node, 'border-right-width');
+	return node.clientWidth + leftBorder + rightBorder;
+};
 
 const getResolver = () => {
 	if (!resolverDoc) {
@@ -12,59 +27,7 @@ const getResolver = () => {
 		resolverDoc.head.appendChild(resolverBase);
 		resolverDoc.body.appendChild(resolverAnchor);
 	}
-	return { base: resolverBase!, anchor: resolverAnchor! };
-};
-
-export const resolveUrl = (url: string, baseUrl: string | null): string => {
-	// url is absolute already
-	if (url.match(/^[a-z]+:\/\//i)) {
-		return url;
-	}
-
-	// url is absolute already, without protocol
-	if (url.match(/^\/\//)) {
-		return window.location.protocol + url;
-	}
-
-	// dataURI, mailto:, tel:, etc.
-	if (url.match(/^[a-z]+:/i)) {
-		return url;
-	}
-
-	const { base, anchor } = getResolver();
-	base.href = baseUrl || '';
-	anchor.href = url;
-
-	return anchor.href;
-};
-
-export const uuid = (() => {
-	let counter = 0;
-
-	const random = () => {
-		return `0000${((Math.random() * 36 ** 4) << 0).toString(36)}`.slice(-4);
-	};
-
-	return () => {
-		counter += 1;
-		return `u${random()}${counter}`;
-	};
-})();
-
-let styleProps: string[] | null = null;
-export const getStyleProperties = (options: Options = {}): string[] => {
-	if (styleProps) {
-		return styleProps;
-	}
-
-	if (options.includeStyleProperties) {
-		styleProps = options.includeStyleProperties;
-		return styleProps;
-	}
-
-	styleProps = Array.from(window.getComputedStyle(document.documentElement));
-
-	return styleProps;
+	return { anchor: resolverAnchor!, base: resolverBase! };
 };
 
 const px = (node: HTMLElement, styleProperty: string) => {
@@ -73,48 +36,7 @@ const px = (node: HTMLElement, styleProperty: string) => {
 	return val ? parseFloat(val.replace('px', '')) : 0;
 };
 
-const getNodeWidth = (node: HTMLElement) => {
-	const leftBorder = px(node, 'border-left-width');
-	const rightBorder = px(node, 'border-right-width');
-	return node.clientWidth + leftBorder + rightBorder;
-};
-
-const getNodeHeight = (node: HTMLElement) => {
-	const topBorder = px(node, 'border-top-width');
-	const bottomBorder = px(node, 'border-bottom-width');
-	return node.clientHeight + topBorder + bottomBorder;
-};
-
-export const getImageSize = (
-	targetNode: HTMLElement,
-	options: Options = {}
-) => {
-	const width = options.width || getNodeWidth(targetNode);
-	const height = options.height || getNodeHeight(targetNode);
-
-	return { width, height };
-};
-
-export const getPixelRatio = (): number => {
-	return window.devicePixelRatio || 1;
-};
-
-// @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas#maximum_canvas_size
-const canvasDimensionLimit = 16384;
-
-export const checkCanvasDimensions = (canvas: HTMLCanvasElement) => {
-	if (
-		canvas.width > canvasDimensionLimit ||
-		canvas.height > canvasDimensionLimit
-	) {
-		const scale =
-			canvasDimensionLimit / Math.max(canvas.width, canvas.height);
-		canvas.width = Math.floor(canvas.width * scale);
-		canvas.height = Math.floor(canvas.height * scale);
-	}
-};
-
-export const canvasToBlob = (
+const canvasToBlob = (
 	canvas: HTMLCanvasElement,
 	options: Options = {}
 ): Promise<Blob | null> => {
@@ -127,7 +49,19 @@ export const canvasToBlob = (
 	});
 };
 
-export const createImage = (url: string): Promise<HTMLImageElement> => {
+const checkCanvasDimensions = (canvas: HTMLCanvasElement) => {
+	if (
+		canvas.width > canvasDimensionLimit ||
+		canvas.height > canvasDimensionLimit
+	) {
+		const scale =
+			canvasDimensionLimit / Math.max(canvas.width, canvas.height);
+		canvas.width = Math.floor(canvas.width * scale);
+		canvas.height = Math.floor(canvas.height * scale);
+	}
+};
+
+const createImage = (url: string): Promise<HTMLImageElement> => {
 	return new Promise((resolve, reject) => {
 		const img = new Image();
 		img.onload = async () => {
@@ -143,13 +77,55 @@ export const createImage = (url: string): Promise<HTMLImageElement> => {
 	});
 };
 
-export const svgToDataURL = (svg: SVGElement): string => {
-	const serialized = new XMLSerializer().serializeToString(svg);
-	const encoded = encodeURIComponent(serialized);
-	return `data:image/svg+xml;charset=utf-8,${encoded}`;
+const getImageSize = (targetNode: HTMLElement, options: Options = {}) => {
+	const width = options.width || getNodeWidth(targetNode);
+	const height = options.height || getNodeHeight(targetNode);
+
+	return { height, width };
 };
 
-export const nodeToDataURL = (
+const getPixelRatio = (): number => {
+	return window.devicePixelRatio || 1;
+};
+
+const getStyleProperties = (options: Options = {}): string[] => {
+	if (styleProps) {
+		return styleProps;
+	}
+
+	if (options.includeStyleProperties) {
+		styleProps = options.includeStyleProperties;
+		return styleProps;
+	}
+
+	styleProps = Array.from(window.getComputedStyle(document.documentElement));
+
+	return styleProps;
+};
+
+const isInstanceOfElement = <
+	T extends typeof Element | typeof HTMLElement | typeof SVGImageElement
+>(
+	node: Element | HTMLElement | SVGImageElement,
+	instance: T
+): node is T['prototype'] => {
+	if (node instanceof instance) {
+		return true;
+	}
+
+	const nodePrototype = Object.getPrototypeOf(node);
+
+	if (nodePrototype === null) {
+		return false;
+	}
+
+	return (
+		nodePrototype.constructor.name === instance.name ||
+		isInstanceOfElement(nodePrototype, instance)
+	);
+};
+
+const nodeToDataURL = (
 	node: HTMLElement,
 	width: number,
 	height: number
@@ -173,24 +149,58 @@ export const nodeToDataURL = (
 	return svgToDataURL(svg);
 };
 
-export const isInstanceOfElement = <
-	T extends typeof Element | typeof HTMLElement | typeof SVGImageElement
->(
-	node: Element | HTMLElement | SVGImageElement,
-	instance: T
-): node is T['prototype'] => {
-	if (node instanceof instance) {
-		return true;
+const resolveUrl = (url: string, baseUrl: string | null): string => {
+	// url is absolute already
+	if (url.match(/^[a-z]+:\/\//i)) {
+		return url;
 	}
 
-	const nodePrototype = Object.getPrototypeOf(node);
-
-	if (nodePrototype === null) {
-		return false;
+	// url is absolute already, without protocol
+	if (url.match(/^\/\//)) {
+		return window.location.protocol + url;
 	}
 
-	return (
-		nodePrototype.constructor.name === instance.name ||
-		isInstanceOfElement(nodePrototype, instance)
-	);
+	// dataURI, mailto:, tel:, etc.
+	if (url.match(/^[a-z]+:/i)) {
+		return url;
+	}
+
+	const { base, anchor } = getResolver();
+	base.href = baseUrl || '';
+	anchor.href = url;
+
+	return anchor.href;
+};
+
+const svgToDataURL = (svg: SVGElement): string => {
+	const serialized = new XMLSerializer().serializeToString(svg);
+	const encoded = encodeURIComponent(serialized);
+	return `data:image/svg+xml;charset=utf-8,${encoded}`;
+};
+
+const uuid = (() => {
+	let counter = 0;
+
+	const random = () => {
+		return `0000${((Math.random() * 36 ** 4) << 0).toString(36)}`.slice(-4);
+	};
+
+	return () => {
+		counter += 1;
+		return `u${random()}${counter}`;
+	};
+})();
+
+export {
+	canvasToBlob,
+	checkCanvasDimensions,
+	createImage,
+	getImageSize,
+	getPixelRatio,
+	getStyleProperties,
+	isInstanceOfElement,
+	nodeToDataURL,
+	resolveUrl,
+	svgToDataURL,
+	uuid
 };

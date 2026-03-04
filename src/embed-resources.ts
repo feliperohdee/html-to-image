@@ -4,9 +4,36 @@ import { resolveUrl } from './util';
 import { getMimeType } from './mimes';
 import { isDataUrl, makeDataUrl, resourceToDataURL } from './dataurl';
 
+type FetchedResource = {
+	dataURL: string;
+	url: string;
+} | null;
+
+const FONT_SRC_REGEX = /src:\s*(?:url\([^)]+\)\s*format\([^)]+\)[,;]\s*)+/g;
 const URL_REGEX = /url\((['"]?)([^'"]+?)\1\)/g;
 const URL_WITH_FORMAT_REGEX = /url\([^)]+\)\s*format\((["']?)([^"']+)\1\)/g;
-const FONT_SRC_REGEX = /src:\s*(?:url\([^)]+\)\s*format\([^)]+\)[,;]\s*)+/g;
+
+const filterPreferredFontFormat = (
+	str: string,
+	{ preferredFontFormat }: Options
+): string => {
+	if (!preferredFontFormat) {
+		return str;
+	}
+
+	return str.replace(FONT_SRC_REGEX, (match: string) => {
+		while (true) {
+			const [src, , format] = URL_WITH_FORMAT_REGEX.exec(match) || [];
+			if (!format) {
+				return '';
+			}
+
+			if (format === preferredFontFormat) {
+				return `src: ${src};`;
+			}
+		}
+	});
+};
 
 const toRegex = (url: string): RegExp => {
 	// eslint-disable-next-line no-useless-escape
@@ -14,20 +41,7 @@ const toRegex = (url: string): RegExp => {
 	return new RegExp(`(url\\(['"]?)(${escaped})(['"]?\\))`, 'g');
 };
 
-export const parseURLs = (cssText: string): string[] => {
-	const urls: string[] = [];
-
-	cssText.replace(URL_REGEX, (raw, quotation, url) => {
-		urls.push(url);
-		return raw;
-	});
-
-	return urls.filter(url => {
-		return !isDataUrl(url);
-	});
-};
-
-export const embed = async (
+const embed = async (
 	cssText: string,
 	resourceURL: string,
 	baseURL: string | null,
@@ -57,38 +71,7 @@ export const embed = async (
 	return cssText;
 };
 
-const filterPreferredFontFormat = (
-	str: string,
-	{ preferredFontFormat }: Options
-): string => {
-	if (!preferredFontFormat) {
-		return str;
-	}
-
-	return str.replace(FONT_SRC_REGEX, (match: string) => {
-		while (true) {
-			const [src, , format] = URL_WITH_FORMAT_REGEX.exec(match) || [];
-			if (!format) {
-				return '';
-			}
-
-			if (format === preferredFontFormat) {
-				return `src: ${src};`;
-			}
-		}
-	});
-};
-
-export const shouldEmbed = (url: string): boolean => {
-	return url.search(URL_REGEX) !== -1;
-};
-
-type FetchedResource = {
-	dataURL: string;
-	url: string;
-} | null;
-
-export const embedResources = async (
+const embedResources = async (
 	cssText: string,
 	baseUrl: string | null,
 	options: Options
@@ -131,3 +114,22 @@ export const embedResources = async (
 
 	return result;
 };
+
+const parseURLs = (cssText: string): string[] => {
+	const urls: string[] = [];
+
+	cssText.replace(URL_REGEX, (raw, quotation, url) => {
+		urls.push(url);
+		return raw;
+	});
+
+	return urls.filter(url => {
+		return !isDataUrl(url);
+	});
+};
+
+const shouldEmbed = (url: string): boolean => {
+	return url.search(URL_REGEX) !== -1;
+};
+
+export { embed, embedResources, parseURLs, shouldEmbed };

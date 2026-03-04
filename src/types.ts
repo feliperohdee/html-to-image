@@ -1,4 +1,4 @@
-export interface Options {
+interface Options {
 	/**
 	 * Width in pixels to be applied to node before rendering.
 	 */
@@ -102,3 +102,5 @@ export interface Options {
 	 */
 	onImageErrorHandler?: OnErrorEventHandler;
 }
+
+export type { Options };

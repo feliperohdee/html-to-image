@@ -4,24 +4,6 @@ import { isInstanceOfElement } from './util';
 import { isDataUrl, resourceToDataURL } from './dataurl';
 import { getMimeType } from './mimes';
 
-const embedProp = async (
-	propName: string,
-	node: HTMLElement,
-	options: Options
-) => {
-	const propValue = node.style?.getPropertyValue(propName);
-	if (propValue) {
-		const cssString = await embedResources(propValue, null, options);
-		node.style.setProperty(
-			propName,
-			cssString,
-			node.style.getPropertyPriority(propName)
-		);
-		return true;
-	}
-	return false;
-};
-
 const embedBackground = async <T extends HTMLElement>(
 	clonedNode: T,
 	options: Options
@@ -32,6 +14,20 @@ const embedBackground = async <T extends HTMLElement>(
 		(await embedProp('-webkit-mask', clonedNode, options)) ||
 		(await embedProp('mask-image', clonedNode, options)) ||
 		(await embedProp('-webkit-mask-image', clonedNode, options));
+};
+
+const embedChildren = async <T extends HTMLElement>(
+	clonedNode: T,
+	options: Options
+) => {
+	const children = Array.from<HTMLElement>(
+		clonedNode.childNodes as unknown as HTMLElement[]
+	);
+	await Promise.all(
+		children.map(child => {
+			return embedImages(child, options);
+		})
+	);
 };
 
 const embedImageNode = async <T extends HTMLElement | SVGImageElement>(
@@ -83,21 +79,25 @@ const embedImageNode = async <T extends HTMLElement | SVGImageElement>(
 	});
 };
 
-const embedChildren = async <T extends HTMLElement>(
-	clonedNode: T,
+const embedProp = async (
+	propName: string,
+	node: HTMLElement,
 	options: Options
 ) => {
-	const children = Array.from<HTMLElement>(
-		clonedNode.childNodes as unknown as HTMLElement[]
-	);
-	await Promise.all(
-		children.map(child => {
-			return embedImages(child, options);
-		})
-	);
+	const propValue = node.style?.getPropertyValue(propName);
+	if (propValue) {
+		const cssString = await embedResources(propValue, null, options);
+		node.style.setProperty(
+			propName,
+			cssString,
+			node.style.getPropertyPriority(propName)
+		);
+		return true;
+	}
+	return false;
 };
 
-export const embedImages = async <T extends HTMLElement>(
+const embedImages = async <T extends HTMLElement>(
 	clonedNode: T,
 	options: Options
 ) => {
@@ -109,3 +109,5 @@ export const embedImages = async <T extends HTMLElement>(
 		await embedChildren(clonedNode, options);
 	}
 };
+
+export { embedImages };

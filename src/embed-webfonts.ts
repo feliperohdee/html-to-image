@@ -9,27 +9,6 @@ type Metadata = {
 
 const cssFetchCache: { [href: string]: Metadata } = {};
 
-export const clearCSSCache = () => {
-	Object.keys(cssFetchCache).forEach(key => {
-		delete cssFetchCache[key];
-	});
-};
-
-const fetchCSS = async (url: string) => {
-	let cache = cssFetchCache[url];
-	if (cache != null) {
-		return cache;
-	}
-
-	const res = await fetch(url);
-	const cssText = await res.text();
-	cache = { cssText, url };
-
-	cssFetchCache[url] = cache;
-
-	return cache;
-};
-
 const embedFonts = async (
 	data: Metadata,
 	options: Options
@@ -57,51 +36,19 @@ const embedFonts = async (
 	return cssText;
 };
 
-const parseCSS = (source: string) => {
-	if (source == null) {
-		return [];
+const fetchCSS = async (url: string) => {
+	let cache = cssFetchCache[url];
+	if (cache != null) {
+		return cache;
 	}
 
-	const result: string[] = [];
-	const commentsRegex = /(\/\*[\s\S]*?\*\/)/gi;
-	let cssText = source.replace(commentsRegex, '');
+	const res = await fetch(url);
+	const cssText = await res.text();
+	cache = { cssText, url };
 
-	const keyframesRegex = new RegExp(
-		'((@.*?keyframes [\\s\\S]*?){([\\s\\S]*?}\\s*?)})',
-		'gi'
-	);
+	cssFetchCache[url] = cache;
 
-	while (true) {
-		const matches = keyframesRegex.exec(cssText);
-		if (matches === null) {
-			break;
-		}
-		result.push(matches[0]);
-	}
-	cssText = cssText.replace(keyframesRegex, '');
-
-	const importRegex = /@import[\s\S]*?url\([^)]*\)[\s\S]*?;/gi;
-	const combinedCSSRegex =
-		'((\\s*?(?:\\/\\*[\\s\\S]*?\\*\\/)?\\s*?@media[\\s\\S]' +
-		'*?){([\\s\\S]*?)}\\s*?})|(([\\s\\S]*?){([\\s\\S]*?)})';
-	const unifiedRegex = new RegExp(combinedCSSRegex, 'gi');
-
-	while (true) {
-		let matches = importRegex.exec(cssText);
-		if (matches === null) {
-			matches = unifiedRegex.exec(cssText);
-			if (matches === null) {
-				break;
-			} else {
-				importRegex.lastIndex = unifiedRegex.lastIndex;
-			}
-		} else {
-			unifiedRegex.lastIndex = importRegex.lastIndex;
-		}
-		result.push(matches[0]);
-	}
-
-	return result;
+	return cache;
 };
 
 const getCSSRules = async (
@@ -204,36 +151,6 @@ const getCSSRules = async (
 	return ret;
 };
 
-const getWebFontRules = (cssRules: CSSStyleRule[]): CSSStyleRule[] => {
-	return cssRules
-		.filter(rule => {
-			return rule.type === CSSRule.FONT_FACE_RULE;
-		})
-		.filter(rule => {
-			return shouldEmbed(rule.style.getPropertyValue('src'));
-		});
-};
-
-const parseWebFontRules = async <T extends HTMLElement>(
-	node: T,
-	options: Options
-) => {
-	if (node.ownerDocument == null) {
-		throw new Error('Provided element is not within a Document');
-	}
-
-	const styleSheets = Array.from<CSSStyleSheet>(
-		node.ownerDocument.styleSheets
-	);
-	const cssRules = await getCSSRules(styleSheets, options);
-
-	return getWebFontRules(cssRules);
-};
-
-const normalizeFontFamily = (font: string) => {
-	return font.trim().replace(/["']/g, '');
-};
-
 const getUsedFonts = (node: HTMLElement) => {
 	const fonts = new Set<string>();
 	const traverse = (node: HTMLElement) => {
@@ -253,7 +170,115 @@ const getUsedFonts = (node: HTMLElement) => {
 	return fonts;
 };
 
-export const getWebFontCSS = async <T extends HTMLElement>(
+const getWebFontRules = (cssRules: CSSStyleRule[]): CSSStyleRule[] => {
+	return cssRules
+		.filter(rule => {
+			return rule.type === CSSRule.FONT_FACE_RULE;
+		})
+		.filter(rule => {
+			return shouldEmbed(rule.style.getPropertyValue('src'));
+		});
+};
+
+const normalizeFontFamily = (font: string) => {
+	return font.trim().replace(/["']/g, '');
+};
+
+const parseCSS = (source: string) => {
+	if (source == null) {
+		return [];
+	}
+
+	const result: string[] = [];
+	const commentsRegex = /(\/\*[\s\S]*?\*\/)/gi;
+	let cssText = source.replace(commentsRegex, '');
+
+	const keyframesRegex = new RegExp(
+		'((@.*?keyframes [\\s\\S]*?){([\\s\\S]*?}\\s*?)})',
+		'gi'
+	);
+
+	while (true) {
+		const matches = keyframesRegex.exec(cssText);
+		if (matches === null) {
+			break;
+		}
+		result.push(matches[0]);
+	}
+	cssText = cssText.replace(keyframesRegex, '');
+
+	const importRegex = /@import[\s\S]*?url\([^)]*\)[\s\S]*?;/gi;
+	const combinedCSSRegex =
+		'((\\s*?(?:\\/\\*[\\s\\S]*?\\*\\/)?\\s*?@media[\\s\\S]' +
+		'*?){([\\s\\S]*?)}\\s*?})|(([\\s\\S]*?){([\\s\\S]*?)})';
+	const unifiedRegex = new RegExp(combinedCSSRegex, 'gi');
+
+	while (true) {
+		let matches = importRegex.exec(cssText);
+		if (matches === null) {
+			matches = unifiedRegex.exec(cssText);
+			if (matches === null) {
+				break;
+			} else {
+				importRegex.lastIndex = unifiedRegex.lastIndex;
+			}
+		} else {
+			unifiedRegex.lastIndex = importRegex.lastIndex;
+		}
+		result.push(matches[0]);
+	}
+
+	return result;
+};
+
+const parseWebFontRules = async <T extends HTMLElement>(
+	node: T,
+	options: Options
+) => {
+	if (node.ownerDocument == null) {
+		throw new Error('Provided element is not within a Document');
+	}
+
+	const styleSheets = Array.from<CSSStyleSheet>(
+		node.ownerDocument.styleSheets
+	);
+	const cssRules = await getCSSRules(styleSheets, options);
+
+	return getWebFontRules(cssRules);
+};
+
+const clearCSSCache = () => {
+	Object.keys(cssFetchCache).forEach(key => {
+		delete cssFetchCache[key];
+	});
+};
+
+const embedWebFonts = async <T extends HTMLElement>(
+	clonedNode: T,
+	options: Options
+) => {
+	const cssText =
+		options.fontEmbedCSS != null
+			? options.fontEmbedCSS
+			: options.skipFonts
+			? null
+			: await getWebFontCSS(clonedNode, options);
+
+	if (cssText) {
+		const styleNode = document.createElement('style');
+		const styleContent = document.createTextNode(cssText);
+
+		styleNode.appendChild(styleContent);
+
+		if (clonedNode.firstChild) {
+			clonedNode.insertBefore(styleNode, clonedNode.firstChild);
+		} else {
+			clonedNode.appendChild(styleNode);
+		}
+	}
+};
+
+const getWebFontCSS = async <T extends HTMLElement>(
 	node: T,
 	options: Options
 ): Promise<string> => {
@@ -280,27 +305,4 @@ export const getWebFontCSS = async <T extends HTMLElement>(
 	return cssTexts.join('\n');
 };
 
-export const embedWebFonts = async <T extends HTMLElement>(
-	clonedNode: T,
-	options: Options
-) => {
-	const cssText =
-		options.fontEmbedCSS != null
-			? options.fontEmbedCSS
-			: options.skipFonts
-			? null
-			: await getWebFontCSS(clonedNode, options);
-
-	if (cssText) {
-		const styleNode = document.createElement('style');
-		const styleContent = document.createTextNode(cssText);
-
-		styleNode.appendChild(styleContent);
-
-		if (clonedNode.firstChild) {
-			clonedNode.insertBefore(styleNode, clonedNode.firstChild);
-		} else {
-			clonedNode.appendChild(styleNode);
-		}
-	}
-};
+export { clearCSSCache, embedWebFonts, getWebFontCSS };
