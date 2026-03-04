@@ -1,7 +1,5 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(yarn add use-async-helpers)"
-    ]
-  }
+	"permissions": {
+		"allow": ["Bash(yarn add use-async-helpers)"]
+	}
 }

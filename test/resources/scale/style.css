@@ -1,11 +1,11 @@
 #dom-node {
-  width: 100px;
-  height: 100px;
-  background-color: grey;
+	width: 100px;
+	height: 100px;
+	background-color: grey;
 }
 
 #child {
-  height: 30px;
-  width: 30px;
-  background-color: lightgrey;
+	height: 30px;
+	width: 30px;
+	background-color: lightgrey;
 }

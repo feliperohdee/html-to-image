@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "build": "yarn lint && rm -rf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js --sourcemap && tsc --emitDeclarationOnly --outDir dist",
-    "lint": "eslint 'src/**/*.ts' --fix",
+    "lint": "prettier --write . && eslint 'src/**/*.ts' --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },

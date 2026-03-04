@@ -1,11 +1,9 @@
 {
-  "semi": false,
-  "singleQuote": true,
-  "printWidth": 80,
-  "trailingComma": "all",
-  "proseWrap": "never",
-  "overrides": [
-    { "files": ".eslintrc", "options": { "parser": "json" } },
-    { "files": ".prettierrc", "options": { "parser": "json" } }
-  ]
+	"arrowParens": "avoid",
+	"jsxSingleQuote": true,
+	"singleAttributePerLine": true,
+	"singleQuote": true,
+	"tabWidth": 4,
+	"trailingComma": "none",
+	"useTabs": true
 }

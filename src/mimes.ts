@@ -1,25 +1,25 @@
-const WOFF = 'application/font-woff'
-const JPEG = 'image/jpeg'
+const JPEG = 'image/jpeg';
+const WOFF = 'application/font-woff';
 const mimes: { [key: string]: string } = {
-  woff: WOFF,
-  woff2: WOFF,
-  ttf: 'application/font-truetype',
-  eot: 'application/vnd.ms-fontobject',
-  png: 'image/png',
-  jpg: JPEG,
-  jpeg: JPEG,
-  gif: 'image/gif',
-  tiff: 'image/tiff',
-  svg: 'image/svg+xml',
-  webp: 'image/webp',
-}
+	eot: 'application/vnd.ms-fontobject',
+	gif: 'image/gif',
+	jpeg: JPEG,
+	jpg: JPEG,
+	png: 'image/png',
+	svg: 'image/svg+xml',
+	tiff: 'image/tiff',
+	ttf: 'application/font-truetype',
+	webp: 'image/webp',
+	woff: WOFF,
+	woff2: WOFF
+};
 
-function getExtension(url: string): string {
-  const match = /\.([^./]*?)$/g.exec(url)
-  return match ? match[1] : ''
-}
+const getExtension = (url: string): string => {
+	const match = /\.([^./]*?)$/g.exec(url);
+	return match ? match[1] : '';
+};
 
-export function getMimeType(url: string): string {
-  const extension = getExtension(url).toLowerCase()
-  return mimes[extension] || ''
-}
+export const getMimeType = (url: string): string => {
+	const extension = getExtension(url).toLowerCase();
+	return mimes[extension] || '';
+};

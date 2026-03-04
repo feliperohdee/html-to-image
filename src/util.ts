@@ -1,261 +1,196 @@
-import type { Options } from './types'
+import type { Options } from './types';
 
-export function resolveUrl(url: string, baseUrl: string | null): string {
-  // url is absolute already
-  if (url.match(/^[a-z]+:\/\//i)) {
-    return url
-  }
+let resolverDoc: Document | null = null;
+let resolverBase: HTMLBaseElement | null = null;
+let resolverAnchor: HTMLAnchorElement | null = null;
 
-  // url is absolute already, without protocol
-  if (url.match(/^\/\//)) {
-    return window.location.protocol + url
-  }
+const getResolver = () => {
+	if (!resolverDoc) {
+		resolverDoc = document.implementation.createHTMLDocument();
+		resolverBase = resolverDoc.createElement('base');
+		resolverAnchor = resolverDoc.createElement('a');
+		resolverDoc.head.appendChild(resolverBase);
+		resolverDoc.body.appendChild(resolverAnchor);
+	}
+	return { base: resolverBase!, anchor: resolverAnchor! };
+};
 
-  // dataURI, mailto:, tel:, etc.
-  if (url.match(/^[a-z]+:/i)) {
-    return url
-  }
+export const resolveUrl = (url: string, baseUrl: string | null): string => {
+	// url is absolute already
+	if (url.match(/^[a-z]+:\/\//i)) {
+		return url;
+	}
 
-  const doc = document.implementation.createHTMLDocument()
-  const base = doc.createElement('base')
-  const a = doc.createElement('a')
+	// url is absolute already, without protocol
+	if (url.match(/^\/\//)) {
+		return window.location.protocol + url;
+	}
 
-  doc.head.appendChild(base)
-  doc.body.appendChild(a)
+	// dataURI, mailto:, tel:, etc.
+	if (url.match(/^[a-z]+:/i)) {
+		return url;
+	}
 
-  if (baseUrl) {
-    base.href = baseUrl
-  }
+	const { base, anchor } = getResolver();
+	base.href = baseUrl || '';
+	anchor.href = url;
 
-  a.href = url
-
-  return a.href
-}
+	return anchor.href;
+};
 
 export const uuid = (() => {
-  // generate uuid for className of pseudo elements.
-  // We should not use GUIDs, otherwise pseudo elements sometimes cannot be captured.
-  let counter = 0
+	let counter = 0;
 
-  // ref: http://stackoverflow.com/a/6248722/2519373
-  const random = () =>
-     
-    `0000${((Math.random() * 36 ** 4) << 0).toString(36)}`.slice(-4)
+	const random = () => {
+		return `0000${((Math.random() * 36 ** 4) << 0).toString(36)}`.slice(-4);
+	};
 
-  return () => {
-    counter += 1
-    return `u${random()}${counter}`
-  }
-})()
+	return () => {
+		counter += 1;
+		return `u${random()}${counter}`;
+	};
+})();
 
-export function delay<T>(ms: number) {
-  return (args: T) =>
-    new Promise<T>((resolve) => {
-      setTimeout(() => resolve(args), ms)
-    })
-}
+let styleProps: string[] | null = null;
+export const getStyleProperties = (options: Options = {}): string[] => {
+	if (styleProps) {
+		return styleProps;
+	}
 
-export function toArray<T>(arrayLike: any): T[] {
-  const arr: T[] = []
+	if (options.includeStyleProperties) {
+		styleProps = options.includeStyleProperties;
+		return styleProps;
+	}
 
-  for (let i = 0, l = arrayLike.length; i < l; i++) {
-    arr.push(arrayLike[i])
-  }
+	styleProps = Array.from(window.getComputedStyle(document.documentElement));
 
-  return arr
-}
+	return styleProps;
+};
 
-let styleProps: string[] | null = null
-export function getStyleProperties(options: Options = {}): string[] {
-  if (styleProps) {
-    return styleProps
-  }
+const px = (node: HTMLElement, styleProperty: string) => {
+	const win = node.ownerDocument.defaultView || window;
+	const val = win.getComputedStyle(node).getPropertyValue(styleProperty);
+	return val ? parseFloat(val.replace('px', '')) : 0;
+};
 
-  if (options.includeStyleProperties) {
-    styleProps = options.includeStyleProperties
-    return styleProps
-  }
+const getNodeWidth = (node: HTMLElement) => {
+	const leftBorder = px(node, 'border-left-width');
+	const rightBorder = px(node, 'border-right-width');
+	return node.clientWidth + leftBorder + rightBorder;
+};
 
-  styleProps = toArray(window.getComputedStyle(document.documentElement))
+const getNodeHeight = (node: HTMLElement) => {
+	const topBorder = px(node, 'border-top-width');
+	const bottomBorder = px(node, 'border-bottom-width');
+	return node.clientHeight + topBorder + bottomBorder;
+};
 
-  return styleProps
-}
+export const getImageSize = (
+	targetNode: HTMLElement,
+	options: Options = {}
+) => {
+	const width = options.width || getNodeWidth(targetNode);
+	const height = options.height || getNodeHeight(targetNode);
 
-function px(node: HTMLElement, styleProperty: string) {
-  const win = node.ownerDocument.defaultView || window
-  const val = win.getComputedStyle(node).getPropertyValue(styleProperty)
-  return val ? parseFloat(val.replace('px', '')) : 0
-}
+	return { width, height };
+};
 
-function getNodeWidth(node: HTMLElement) {
-  const leftBorder = px(node, 'border-left-width')
-  const rightBorder = px(node, 'border-right-width')
-  return node.clientWidth + leftBorder + rightBorder
-}
-
-function getNodeHeight(node: HTMLElement) {
-  const topBorder = px(node, 'border-top-width')
-  const bottomBorder = px(node, 'border-bottom-width')
-  return node.clientHeight + topBorder + bottomBorder
-}
-
-export function getImageSize(targetNode: HTMLElement, options: Options = {}) {
-  const width = options.width || getNodeWidth(targetNode)
-  const height = options.height || getNodeHeight(targetNode)
-
-  return { width, height }
-}
-
-export function getPixelRatio() {
-  let ratio
-
-  let FINAL_PROCESS
-  try {
-    FINAL_PROCESS = process
-  } catch (e) {
-    // pass
-  }
-
-  const val =
-    FINAL_PROCESS && FINAL_PROCESS.env
-      ? FINAL_PROCESS.env.devicePixelRatio
-      : null
-  if (val) {
-    ratio = parseInt(val, 10)
-    if (Number.isNaN(ratio)) {
-      ratio = 1
-    }
-  }
-  return ratio || window.devicePixelRatio || 1
-}
+export const getPixelRatio = (): number => {
+	return window.devicePixelRatio || 1;
+};
 
 // @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas#maximum_canvas_size
-const canvasDimensionLimit = 16384
+const canvasDimensionLimit = 16384;
 
-export function checkCanvasDimensions(canvas: HTMLCanvasElement) {
-  if (
-    canvas.width > canvasDimensionLimit ||
-    canvas.height > canvasDimensionLimit
-  ) {
-    if (
-      canvas.width > canvasDimensionLimit &&
-      canvas.height > canvasDimensionLimit
-    ) {
-      if (canvas.width > canvas.height) {
-        canvas.height *= canvasDimensionLimit / canvas.width
-        canvas.width = canvasDimensionLimit
-      } else {
-        canvas.width *= canvasDimensionLimit / canvas.height
-        canvas.height = canvasDimensionLimit
-      }
-    } else if (canvas.width > canvasDimensionLimit) {
-      canvas.height *= canvasDimensionLimit / canvas.width
-      canvas.width = canvasDimensionLimit
-    } else {
-      canvas.width *= canvasDimensionLimit / canvas.height
-      canvas.height = canvasDimensionLimit
-    }
-  }
-}
+export const checkCanvasDimensions = (canvas: HTMLCanvasElement) => {
+	if (
+		canvas.width > canvasDimensionLimit ||
+		canvas.height > canvasDimensionLimit
+	) {
+		const scale =
+			canvasDimensionLimit / Math.max(canvas.width, canvas.height);
+		canvas.width = Math.floor(canvas.width * scale);
+		canvas.height = Math.floor(canvas.height * scale);
+	}
+};
 
-export function canvasToBlob(
-  canvas: HTMLCanvasElement,
-  options: Options = {},
-): Promise<Blob | null> {
-  if (canvas.toBlob) {
-    return new Promise((resolve) => {
-      canvas.toBlob(
-        resolve,
-        options.type ? options.type : 'image/png',
-        options.quality ? options.quality : 1,
-      )
-    })
-  }
+export const canvasToBlob = (
+	canvas: HTMLCanvasElement,
+	options: Options = {}
+): Promise<Blob | null> => {
+	return new Promise(resolve => {
+		canvas.toBlob(
+			resolve,
+			options.type || 'image/png',
+			options.quality || 1
+		);
+	});
+};
 
-  return new Promise((resolve) => {
-    const binaryString = window.atob(
-      canvas
-        .toDataURL(
-          options.type ? options.type : undefined,
-          options.quality ? options.quality : undefined,
-        )
-        .split(',')[1],
-    )
-    const len = binaryString.length
-    const binaryArray = new Uint8Array(len)
+export const createImage = (url: string): Promise<HTMLImageElement> => {
+	return new Promise((resolve, reject) => {
+		const img = new Image();
+		img.onload = async () => {
+			await img.decode();
+			requestAnimationFrame(() => {
+				resolve(img);
+			});
+		};
+		img.onerror = reject;
+		img.crossOrigin = 'anonymous';
+		img.decoding = 'async';
+		img.src = url;
+	});
+};
 
-    for (let i = 0; i < len; i += 1) {
-      binaryArray[i] = binaryString.charCodeAt(i)
-    }
+export const svgToDataURL = (svg: SVGElement): string => {
+	const serialized = new XMLSerializer().serializeToString(svg);
+	const encoded = encodeURIComponent(serialized);
+	return `data:image/svg+xml;charset=utf-8,${encoded}`;
+};
 
-    resolve(
-      new Blob([binaryArray], {
-        type: options.type ? options.type : 'image/png',
-      }),
-    )
-  })
-}
+export const nodeToDataURL = (
+	node: HTMLElement,
+	width: number,
+	height: number
+): string => {
+	const xmlns = 'http://www.w3.org/2000/svg';
+	const svg = document.createElementNS(xmlns, 'svg');
+	const foreignObject = document.createElementNS(xmlns, 'foreignObject');
 
-export function createImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      img.decode().then(() => {
-        requestAnimationFrame(() => resolve(img))
-      })
-    }
-    img.onerror = reject
-    img.crossOrigin = 'anonymous'
-    img.decoding = 'async'
-    img.src = url
-  })
-}
+	svg.setAttribute('width', `${width}`);
+	svg.setAttribute('height', `${height}`);
+	svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
-export async function svgToDataURL(svg: SVGElement): Promise<string> {
-  return Promise.resolve()
-    .then(() => new XMLSerializer().serializeToString(svg))
-    .then(encodeURIComponent)
-    .then((html) => `data:image/svg+xml;charset=utf-8,${html}`)
-}
+	foreignObject.setAttribute('width', '100%');
+	foreignObject.setAttribute('height', '100%');
+	foreignObject.setAttribute('x', '0');
+	foreignObject.setAttribute('y', '0');
+	foreignObject.setAttribute('externalResourcesRequired', 'true');
 
-export async function nodeToDataURL(
-  node: HTMLElement,
-  width: number,
-  height: number,
-): Promise<string> {
-  const xmlns = 'http://www.w3.org/2000/svg'
-  const svg = document.createElementNS(xmlns, 'svg')
-  const foreignObject = document.createElementNS(xmlns, 'foreignObject')
-
-  svg.setAttribute('width', `${width}`)
-  svg.setAttribute('height', `${height}`)
-  svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
-
-  foreignObject.setAttribute('width', '100%')
-  foreignObject.setAttribute('height', '100%')
-  foreignObject.setAttribute('x', '0')
-  foreignObject.setAttribute('y', '0')
-  foreignObject.setAttribute('externalResourcesRequired', 'true')
-
-  svg.appendChild(foreignObject)
-  foreignObject.appendChild(node)
-  return svgToDataURL(svg)
-}
+	svg.appendChild(foreignObject);
+	foreignObject.appendChild(node);
+	return svgToDataURL(svg);
+};
 
 export const isInstanceOfElement = <
-  T extends typeof Element | typeof HTMLElement | typeof SVGImageElement,
+	T extends typeof Element | typeof HTMLElement | typeof SVGImageElement
 >(
-  node: Element | HTMLElement | SVGImageElement,
-  instance: T,
+	node: Element | HTMLElement | SVGImageElement,
+	instance: T
 ): node is T['prototype'] => {
-  if (node instanceof instance) return true
+	if (node instanceof instance) {
+		return true;
+	}
 
-  const nodePrototype = Object.getPrototypeOf(node)
+	const nodePrototype = Object.getPrototypeOf(node);
 
-  if (nodePrototype === null) return false
+	if (nodePrototype === null) {
+		return false;
+	}
 
-  return (
-    nodePrototype.constructor.name === instance.name ||
-    isInstanceOfElement(nodePrototype, instance)
-  )
-}
+	return (
+		nodePrototype.constructor.name === instance.name ||
+		isInstanceOfElement(nodePrototype, instance)
+	);
+};
