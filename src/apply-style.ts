@@ -1,9 +1,9 @@
 import type { Options } from './types'
 
-export function applyStyle<T extends HTMLElement>(
+export const applyStyle = <T extends HTMLElement>(
   node: T,
   options: Options,
-): T {
+): T => {
   const { style } = node
 
   if (options.backgroundColor) {
