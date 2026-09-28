@@ -161,4 +161,15 @@ describe('work with options', () => {
 		const node = await bootstrap('images/node.html', 'images/style.css');
 		assertTextRendered(['PNG', 'JPG'], { cacheBust: true })(node);
 	});
+
+	it('should export the blob in the given type', async () => {
+		const node = await bootstrap(
+			'bgcolor/node.html',
+			'bgcolor/style.css',
+			'bgcolor/image'
+		);
+		const blob = await htmlToImage.toBlob(node, { type: 'image/jpeg' });
+
+		expect(blob?.type).toEqual('image/jpeg');
+	});
 });
