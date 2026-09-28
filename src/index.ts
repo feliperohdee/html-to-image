@@ -8,6 +8,7 @@ import {
 	canvasToBlob,
 	checkCanvasDimensions,
 	createImage,
+	drawSvgImage,
 	getImageSize,
 	getPixelRatio,
 	nodeToDataURL
@@ -63,7 +64,7 @@ const toCanvas = async <T extends HTMLElement>(
 		context.fillRect(0, 0, canvas.width, canvas.height);
 	}
 
-	context.drawImage(img, 0, 0, canvas.width, canvas.height);
+	await drawSvgImage(context, img);
 
 	return canvas;
 };

@@ -1,15 +1,5 @@
 {
-  "name": "html-to-image",
-  "version": "1.11.13",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "private": true,
-  "scripts": {
-    "build": "yarn lint && rm -rf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js --sourcemap && tsc --emitDeclarationOnly --outDir dist",
-    "lint": "prettier --write . && eslint 'src/**/*.ts' --fix",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
+  "author": "Felipe Rohde <feliperohdee@gmail.com>",
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@fortawesome/fontawesome-free": "^6.1.2",
@@ -24,7 +14,27 @@
     "typescript-eslint": "^8.0.0",
     "vitest": "^3.0.0"
   },
-  "dependencies": {
-    "use-async-helpers": "^1.0.31"
-  }
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "main": "dist/index.js",
+  "name": "@feliperohdee/html-to-image",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/feliperohdee/html-to-image"
+  },
+  "scripts": {
+    "build": "yarn lint && rm -rf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js --sourcemap && tsc --emitDeclarationOnly --outDir dist",
+    "lint": "prettier --write . && eslint 'src/**/*.ts' --fix",
+    "npm:publish": "yarn test && yarn build && yarn version --patch --no-git-tag-version && yarn publish --non-interactive",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "version": "1.0.0"
 }

@@ -1,5 +1,4 @@
 import type { Options } from './types';
-import { promiseAll } from 'use-async-helpers';
 import { clonePseudoElements } from './clone-pseudos';
 import { createImage, isInstanceOfElement, getStyleProperties } from './util';
 import { getMimeType } from './mimes';
@@ -46,13 +45,10 @@ const cloneChildren = async <T extends HTMLElement>(
 		return clonedNode;
 	}
 
-	const clonedChildren = await promiseAll(
+	const clonedChildren = await Promise.all(
 		children.map(child => {
-			return () => {
-				return cloneNode(child, options);
-			};
-		}),
-		10
+			return cloneNode(child, options);
+		})
 	);
 
 	clonedChildren.forEach(clonedChild => {

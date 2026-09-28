@@ -53,7 +53,16 @@ export default defineConfig({
 	test: {
 		browser: {
 			enabled: true,
-			instances: [{ browser: 'chromium' }],
+			headless: true,
+			// WebKit only runs shadow.spec.ts: the other specs compare against reference images drawn by Chromium. An
+			// instance's include adds to the one below instead of replacing it, so it leaves out the rest instead.
+			instances: [
+				{ browser: 'chromium' },
+				{
+					browser: 'webkit',
+					exclude: ['test/spec/!(shadow).{spec,sepc}.ts']
+				}
+			],
 			provider: 'playwright'
 		},
 		include: ['test/spec/**/*.{spec,sepc}.ts'],

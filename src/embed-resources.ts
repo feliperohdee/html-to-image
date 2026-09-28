@@ -1,5 +1,4 @@
 import type { Options } from './types';
-import { promiseAll } from 'use-async-helpers';
 import { resolveUrl } from './util';
 import { getMimeType } from './mimes';
 import { isDataUrl, makeDataUrl, resourceToDataURL } from './dataurl';
@@ -83,26 +82,21 @@ const embedResources = async (
 	const filteredCSSText = filterPreferredFontFormat(cssText, options);
 	const urls = parseURLs(filteredCSSText);
 
-	const fetched = await promiseAll<FetchedResource>(
-		urls.map(url => {
-			return async () => {
-				try {
-					const resolvedURL = baseUrl
-						? resolveUrl(url, baseUrl)
-						: url;
-					const contentType = getMimeType(url);
-					const dataURL = await resourceToDataURL(
-						resolvedURL,
-						contentType,
-						options
-					);
-					return { dataURL, url };
-				} catch {
-					return null;
-				}
-			};
-		}),
-		10
+	const fetched = await Promise.all(
+		urls.map(async (url): Promise<FetchedResource> => {
+			try {
+				const resolvedURL = baseUrl ? resolveUrl(url, baseUrl) : url;
+				const contentType = getMimeType(url);
+				const dataURL = await resourceToDataURL(
+					resolvedURL,
+					contentType,
+					options
+				);
+				return { dataURL, url };
+			} catch {
+				return null;
+			}
+		})
 	);
 
 	let result = filteredCSSText;

@@ -36,6 +36,11 @@ const px = (node: HTMLElement, styleProperty: string) => {
 	return val ? parseFloat(val.replace('px', '')) : 0;
 };
 
+// true in Safari and in every browser on an iPhone: they all run Apple's WebKit.
+const webKit = () => {
+	return navigator.vendor === 'Apple Computer, Inc.';
+};
+
 const canvasToBlob = (
 	canvas: HTMLCanvasElement,
 	options: Options = {}
@@ -75,6 +80,30 @@ const createImage = (url: string): Promise<HTMLImageElement> => {
 		img.decoding = 'async';
 		img.src = url;
 	});
+};
+
+// Safari draws the SVG's box-shadows wrong straight into a canvas (shifted, unblurred): createImageBitmap renders
+// the SVG at the canvas size first, shadows right. Chrome refuses to export that bitmap and Firefox renders it
+// blurry; both draw the SVG right straight into the canvas.
+const drawSvgImage = async (
+	context: CanvasRenderingContext2D,
+	img: HTMLImageElement
+) => {
+	const { height, width } = context.canvas;
+
+	if (!webKit()) {
+		context.drawImage(img, 0, 0, width, height);
+		return;
+	}
+
+	const bitmap = await createImageBitmap(img, {
+		resizeHeight: height,
+		resizeQuality: 'high',
+		resizeWidth: width
+	});
+
+	context.drawImage(bitmap, 0, 0);
+	bitmap.close();
 };
 
 const getImageSize = (targetNode: HTMLElement, options: Options = {}) => {
@@ -195,6 +224,7 @@ export {
 	canvasToBlob,
 	checkCanvasDimensions,
 	createImage,
+	drawSvgImage,
 	getImageSize,
 	getPixelRatio,
 	getStyleProperties,
